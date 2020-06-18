@@ -1,13 +1,14 @@
 {
-  "name": "rss-feed",
+  "name": "rss-reader",
   "version": "0.1.0",
   "description": "",
   "scripts": {
-    "test": "jest --colors"
+    "test": "jest --colors",
+    "build": "webpack"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hexlet-boilerplates/webpack-package.git"
+    "url": "https://github.com/iamafansev/frontend-project-lvl3.git"
   },
   "author": "Oleg Afanasev",
   "license": "ISC",
@@ -15,13 +16,18 @@
     "verbose": true,
     "testURL": "http://localhost/"
   },
-  "dependencies": {},
+  "dependencies": {
+    "bootstrap": "^4.5.0",
+    "jquery": "^3.5.1",
+    "popper.js": "^1.16.1"
+  },
   "devDependencies": {
     "@babel/core": "^7.9.0",
     "@babel/preset-env": "^7.9.0",
     "babel-eslint": "^10.1.0",
     "babel-jest": "^25.2.6",
     "babel-loader": "^8.1.0",
+    "css-loader": "^3.6.0",
     "debug": "^4.1.1",
     "eslint": "^6.8.0",
     "eslint-config-airbnb": "^18.1.0",
@@ -31,6 +37,7 @@
     "html-webpack-plugin": "^4.0.4",
     "jest": "^25.2.7",
     "jest-cli": "^25.2.7",
+    "style-loader": "^1.2.1",
     "webpack": "^4.42.1",
     "webpack-cli": "^3.3.11",
     "webpack-dev-server": "^3.10.3"
