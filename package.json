@@ -3,8 +3,7 @@
   "version": "0.1.0",
   "description": "",
   "scripts": {
-    "test": "jest --colors",
-    "build": "webpack"
+    "test": "jest --colors"
   },
   "repository": {
     "type": "git",
