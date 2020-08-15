@@ -16,9 +16,12 @@
     "testURL": "http://localhost/"
   },
   "dependencies": {
+    "axios": "^0.19.2",
     "bootstrap": "^4.5.0",
     "jquery": "^3.5.1",
-    "popper.js": "^1.16.1"
+    "on-change": "^2.1.1",
+    "popper.js": "^1.16.1",
+    "yup": "^0.29.3"
   },
   "devDependencies": {
     "@babel/core": "^7.9.0",

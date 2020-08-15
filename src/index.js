@@ -7,6 +7,6 @@ import 'bootstrap/dist/css/bootstrap-grid.min.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './main.css';
 
-import init from './init';
+import app from './app';
 
-init();
+app();
