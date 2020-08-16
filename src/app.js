@@ -1,4 +1,6 @@
+/* eslint-disable no-param-reassign, no-console  */
 import _ from 'lodash';
+// import axios from 'axios';
 import * as yup from 'yup';
 import onChange from 'on-change';
 
@@ -8,27 +10,34 @@ const FAILED_PROCESS_STATUS = 'failed';
 const FINISHED_PROCESS_STATUS = 'finished';
 
 const NETWORK_ERROR_MESSAGE = 'Network Problems. Try again.';
-const URL_ERROR_MESSAGE = 'This must be a valid URL'
+const URL_INVALID_ERROR_MESSAGE = 'This must be a valid URL';
+const URL_ALREADY_EXISTS_ERROR_MESSAGE = 'Rss already exists';
 
-const schema = yup.string().url(URL_ERROR_MESSAGE);
+const schema = yup.string().url(URL_INVALID_ERROR_MESSAGE);
 
-const validate = (fields) => {
+const isUrlAlreadyExistsError = (errorType) => errorType === 'url_exists';
+
+const validate = (value, links) => {
   try {
-    schema.validateSync(fields);
-    return null;
-  } catch (e) {
-    return e.message;
+    schema.validateSync(value);
+    return links.includes(value)
+      ? { type: 'url_exists', message: URL_ALREADY_EXISTS_ERROR_MESSAGE }
+      : {};
+  } catch ({ message }) {
+    return { type: 'url_invalid', message };
   }
 };
 
-const updateValidationState = (error, watchedState) => {
-  watchedState.form.valid = !error;
-  watchedState.form.error = error;
+const updateStateAfterValidation = (error, fieldValue, watchedState) => {
+  watchedState.form.valid = _.isEqual(error, {});
+  watchedState.form.error = error.message;
+
+  if (!isUrlAlreadyExistsError(error.type)) {
+    watchedState.form.links.push(fieldValue);
+  }
 };
 
-const renderErrors = (element, error) => {
-  const feedbackElement = document.querySelector('.feedback');
-
+const renderErrors = (element, feedbackElement, error) => {
   if (feedbackElement.classList.contains('text-danger')) {
     element.classList.remove('is-invalid');
     feedbackElement.classList.remove('text-danger');
@@ -51,12 +60,14 @@ export default function App() {
       processError: null,
       valid: true,
       error: null,
+      links: [],
     },
   };
 
   const form = document.querySelector('[data-form="rss-form"]');
   const urlField = form.elements.url;
   const submitButton = form.querySelector('button[type="submit"]');
+  const feedbackElement = document.querySelector('.feedback');
 
   const processStateHandler = (processState) => {
     switch (processState) {
@@ -88,7 +99,7 @@ export default function App() {
         break;
       case 'form.error':
         submitButton.disabled = false;
-        renderErrors(urlField, value);
+        renderErrors(urlField, feedbackElement, value);
         break;
       default:
         break;
@@ -97,11 +108,12 @@ export default function App() {
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
+    const { value: urlFieldValue } = urlField;
 
-    const error = validate(urlField.value);
-    const isValidForm = !error;
+    const error = validate(urlFieldValue, watchedState.form.links);
+    const isValidForm = _.isEqual(error, {});
 
-    updateValidationState(error, watchedState);
+    updateStateAfterValidation(error, urlFieldValue, watchedState);
 
     if (!isValidForm) {
       return;
