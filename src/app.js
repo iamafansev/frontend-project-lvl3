@@ -6,6 +6,10 @@ import { processStatuses, errorMessages } from './constants';
 import validate from './helpers/validate';
 import parseFeed from './helpers/parseFeed';
 import composeWatchedFormState from './veiws/form';
+import composeWatchedFeedsState from './veiws/feeds';
+
+const CORS_API_URL = 'https://cors-anywhere.herokuapp.com/';
+const buildUrlWithCorsApi = (url) => `${CORS_API_URL}${url}`;
 
 const updateValidationState = (error, watchedState) => {
   watchedState.valid = !error;
@@ -27,6 +31,7 @@ export default function App() {
   const urlField = form.elements.url;
 
   const watchedFormState = composeWatchedFormState(state.form);
+  const watchedFeedsState = composeWatchedFeedsState(state.feeds);
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -41,16 +46,21 @@ export default function App() {
 
     watchedFormState.processState = processStatuses.SENDING;
 
-    axios.get(urlFieldValue)
+    axios.get(buildUrlWithCorsApi(urlFieldValue))
       .then(({ data }) => {
         const { items, ...meta } = parseFeed(data);
         const id = _.uniqueId();
         const itemsWithId = _.map(items, (item) => ({ ...item, id: _.uniqueId() }));
 
-        return { ...meta, id, items: itemsWithId };
+        return {
+          ...meta,
+          id,
+          link: urlFieldValue,
+          items: itemsWithId,
+        };
       })
       .then((data) => {
-        console.log(data);
+        watchedFeedsState.push(data);
         watchedFormState.processState = processStatuses.FINISHED;
         watchedFormState.usedLinks.push(urlFieldValue);
       })
