@@ -13,7 +13,7 @@ const renderFeed = (feed) => {
 };
 
 export default (state) => onChange(state, (path, current, previous) => {
-  if (_.isEqual(current, previous)) {
+  if (_.isEqual(current, previous) || path === 'feed') {
     return;
   }
 
@@ -29,7 +29,7 @@ export default (state) => onChange(state, (path, current, previous) => {
   const feedsContainer = document.getElementById('feeds');
   feedsContainer.innerHTML = feeds
     .map((feed) => {
-      const currentPosts = postsByFeedId[feed.id] || [];
+      const currentPosts = postsByFeedId[feed.id];
       return renderFeed({ ...feed, posts: currentPosts });
     })
     .join('');

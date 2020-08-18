@@ -8,23 +8,29 @@ import parseFeed from './helpers/parseFeed';
 import composeWatchedFormState from './veiws/form';
 import composeWatchedContentState from './veiws/content';
 
-// const FEEDS_UPDATE_DELAY = 5000;
+const FEEDS_UPDATE_DELAY = 5000;
 
 const CORS_API_URL = 'https://cors-anywhere.herokuapp.com/';
 const buildUrlWithCorsApi = (url) => `${CORS_API_URL}${url}`;
 
-// const startFeedUpdateTimer = (url) => {
-//   setTimeout(
-//     () => axios.get(url)
-//       .then(({ data }) => {
-//         const { items, ...meta } = parseFeed(data);
-//         console.log(items);
-//       })
-//       .finally(() => startFeedUpdateTimer(url)),
-//     FEEDS_UPDATE_DELAY,
-//   );
-// };
+const startFeedUpdateTimer = (url, feedId, previousPosts, watchedState) => {
+  let nextState = previousPosts;
+  setTimeout(
+    () => axios.get(url)
+      .then(({ data }) => {
+        const { items: posts } = parseFeed(data);
+        const postsWithFeedId = posts.map((post) => ({ ...post, feedId }));
+        const difference = _.differenceWith(previousPosts, postsWithFeedId, _.isEqual);
 
+        if (!_.isEmpty(difference)) {
+          nextState = [...postsWithFeedId, ...difference];
+          watchedState.posts = nextState;
+        }
+      })
+      .finally(() => startFeedUpdateTimer(url, feedId, nextState, watchedState)),
+    FEEDS_UPDATE_DELAY,
+  );
+};
 
 const updateValidationState = (error, watchedState) => {
   watchedState.valid = !error;
@@ -65,22 +71,18 @@ export default function App() {
     const urlWithCorsApi = buildUrlWithCorsApi(urlFieldValue);
 
     axios.get(urlWithCorsApi)
-      .then(({ data }) => {
-        const { items: posts, ...meta } = parseFeed(data);
+      .then(({ data }) => parseFeed(data))
+      .then((parsedData) => {
+        const { items: posts, ...feed } = parsedData;
         const id = _.uniqueId();
         const postsWithFeedId = posts.map((post) => ({ ...post, feedId: id }));
 
-        return {
-          feed: { ...meta, id, link: urlFieldValue },
-          posts: postsWithFeedId,
-        };
-      })
-      .then(({ posts, feed }) => {
-        watchedContentState.feeds.push(feed);
-        watchedContentState.posts.push(...posts);
+        watchedContentState.feeds.push({ ...feed, id });
+        watchedContentState.posts.push(...postsWithFeedId);
         watchedFormState.processState = processStatuses.FINISHED;
+
+        startFeedUpdateTimer(urlWithCorsApi, id, state.posts, watchedContentState);
       })
-      // .then(() => startFeedUpdateTimer(urlWithCorsApi))
       .catch((err) => {
         watchedFormState.error = errorMessages.NETWORK;
         watchedFormState.processState = processStatuses.FAILED;
