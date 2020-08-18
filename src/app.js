@@ -6,10 +6,25 @@ import { processStatuses, errorMessages } from './constants';
 import validate from './helpers/validate';
 import parseFeed from './helpers/parseFeed';
 import composeWatchedFormState from './veiws/form';
-import composeWatchedFeedsState from './veiws/feeds';
+import composeWatchedContentState from './veiws/content';
+
+// const FEEDS_UPDATE_DELAY = 5000;
 
 const CORS_API_URL = 'https://cors-anywhere.herokuapp.com/';
 const buildUrlWithCorsApi = (url) => `${CORS_API_URL}${url}`;
+
+// const startFeedUpdateTimer = (url) => {
+//   setTimeout(
+//     () => axios.get(url)
+//       .then(({ data }) => {
+//         const { items, ...meta } = parseFeed(data);
+//         console.log(items);
+//       })
+//       .finally(() => startFeedUpdateTimer(url)),
+//     FEEDS_UPDATE_DELAY,
+//   );
+// };
+
 
 const updateValidationState = (error, watchedState) => {
   watchedState.valid = !error;
@@ -22,22 +37,23 @@ export default function App() {
       processState: processStatuses.FILLING,
       valid: true,
       error: null,
-      usedLinks: [],
     },
     feeds: [],
+    posts: [],
   };
 
   const form = document.querySelector('[data-form="rss-form"]');
   const urlField = form.elements.url;
 
   const watchedFormState = composeWatchedFormState(state.form);
-  const watchedFeedsState = composeWatchedFeedsState(state.feeds);
+  const watchedContentState = composeWatchedContentState(_.omit(state, ['form']));
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const urlFieldValue = urlField.value.trim();
+    const alreadyUsedRssLinks = watchedContentState.feeds.map(({ link }) => link);
 
-    const error = validate(urlFieldValue, watchedFormState.usedLinks);
+    const error = validate(urlFieldValue, alreadyUsedRssLinks);
     const isValidForm = !error;
 
     updateValidationState(error, watchedFormState);
@@ -46,24 +62,25 @@ export default function App() {
 
     watchedFormState.processState = processStatuses.SENDING;
 
-    axios.get(buildUrlWithCorsApi(urlFieldValue))
+    const urlWithCorsApi = buildUrlWithCorsApi(urlFieldValue);
+
+    axios.get(urlWithCorsApi)
       .then(({ data }) => {
-        const { items, ...meta } = parseFeed(data);
+        const { items: posts, ...meta } = parseFeed(data);
         const id = _.uniqueId();
-        const itemsWithId = _.map(items, (item) => ({ ...item, id: _.uniqueId() }));
+        const postsWithFeedId = posts.map((post) => ({ ...post, feedId: id }));
 
         return {
-          ...meta,
-          id,
-          link: urlFieldValue,
-          items: itemsWithId,
+          feed: { ...meta, id, link: urlFieldValue },
+          posts: postsWithFeedId,
         };
       })
-      .then((data) => {
-        watchedFeedsState.push(data);
+      .then(({ posts, feed }) => {
+        watchedContentState.feeds.push(feed);
+        watchedContentState.posts.push(...posts);
         watchedFormState.processState = processStatuses.FINISHED;
-        watchedFormState.usedLinks.push(urlFieldValue);
       })
+      // .then(() => startFeedUpdateTimer(urlWithCorsApi))
       .catch((err) => {
         watchedFormState.error = errorMessages.NETWORK;
         watchedFormState.processState = processStatuses.FAILED;
