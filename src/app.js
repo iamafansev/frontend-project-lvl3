@@ -13,21 +13,16 @@ const FEEDS_UPDATE_DELAY = 5000;
 const CORS_API_URL = 'https://cors-anywhere.herokuapp.com/';
 const buildUrlWithCorsApi = (url) => `${CORS_API_URL}${url}`;
 
-const startFeedUpdateTimer = (url, feedId, previousPosts, watchedState) => {
-  let nextState = previousPosts;
+const startFeedUpdateTimer = (url, feedId, watchedState) => {
   setTimeout(
     () => axios.get(url)
       .then(({ data }) => {
         const { items: posts } = parseFeed(data);
         const postsWithFeedId = posts.map((post) => ({ ...post, feedId }));
-        const difference = _.differenceWith(previousPosts, postsWithFeedId, _.isEqual);
 
-        if (!_.isEmpty(difference)) {
-          nextState = [...postsWithFeedId, ...difference];
-          watchedState.posts = nextState;
-        }
+        watchedState.postsByFeedId[feedId] = postsWithFeedId;
       })
-      .finally(() => startFeedUpdateTimer(url, feedId, nextState, watchedState)),
+      .finally(() => startFeedUpdateTimer(url, feedId, watchedState)),
     FEEDS_UPDATE_DELAY,
   );
 };
@@ -45,7 +40,7 @@ export default function App() {
       error: null,
     },
     feeds: [],
-    posts: [],
+    postsByFeedId: {},
   };
 
   const form = document.querySelector('[data-form="rss-form"]');
@@ -75,13 +70,14 @@ export default function App() {
       .then((parsedData) => {
         const { items: posts, ...feed } = parsedData;
         const id = _.uniqueId();
+        const feedWithId = { ...feed, id };
         const postsWithFeedId = posts.map((post) => ({ ...post, feedId: id }));
 
-        watchedContentState.feeds.push({ ...feed, id });
-        watchedContentState.posts.push(...postsWithFeedId);
+        watchedContentState.feeds = [feedWithId, ...watchedContentState.feeds];
+        watchedContentState.postsByFeedId[id] = postsWithFeedId;
         watchedFormState.processState = processStatuses.FINISHED;
 
-        startFeedUpdateTimer(urlWithCorsApi, id, state.posts, watchedContentState);
+        startFeedUpdateTimer(urlWithCorsApi, id, watchedContentState);
       })
       .catch((err) => {
         watchedFormState.error = errorMessages.NETWORK;
