@@ -5,8 +5,8 @@ import axios from 'axios';
 import { processStatuses, errorMessages } from './constants';
 import validate from './helpers/validate';
 import parseFeed from './helpers/parseFeed';
-import composeWatchedFormState from './veiws/form';
-import composeWatchedContentState from './veiws/content';
+import composeWatchedFormState from './views/form';
+import composeWatchedContentState from './views/content';
 
 const FEEDS_UPDATE_DELAY = 5000;
 
@@ -16,20 +16,26 @@ const buildUrlWithCorsApi = (url) => `${CORS_API_URL}${url}`;
 const assignIdsToData = (feedId) => ({ items: posts, ...feed }) => {
   const id = feedId || _.uniqueId();
   const feedWithId = { ...feed, id };
-  const postsWithFeedId = posts.map((post) => ({ ...post, feedId }));
+  const postsWithFeedId = posts.map((post) => ({ ...post, feedId: id }));
 
   return { id, feed: feedWithId, posts: postsWithFeedId };
 };
 
-const startFeedUpdateTimer = (url, feedId, watchedState) => {
+const startFeedUpdateTimer = (url, feedId, previousPosts, watchedState) => {
+  let nextPosts = previousPosts;
   setTimeout(
     () => axios.get(url)
       .then(({ data }) => parseFeed(data))
       .then(assignIdsToData(feedId))
       .then(({ posts }) => {
-        watchedState.postsByFeedId[feedId] = posts;
+        const difference = _.differenceWith(posts, previousPosts, _.isEqual);
+
+        if (!_.isEmpty(difference)) {
+          nextPosts = [...difference, ...previousPosts];
+          watchedState.posts = nextPosts;
+        }
       })
-      .finally(() => startFeedUpdateTimer(url, feedId, watchedState)),
+      .finally(() => startFeedUpdateTimer(url, feedId, nextPosts, watchedState)),
     FEEDS_UPDATE_DELAY,
   );
 };
@@ -47,7 +53,7 @@ export default function App() {
       error: null,
     },
     feeds: [],
-    postsByFeedId: {},
+    posts: [],
   };
 
   const form = document.querySelector('[data-form="rss-form"]');
@@ -77,9 +83,9 @@ export default function App() {
       .then(assignIdsToData())
       .then(({ id, posts, feed }) => {
         watchedContentState.feeds = [feed, ...watchedContentState.feeds];
-        watchedContentState.postsByFeedId[id] = posts;
+        watchedContentState.posts.push(...posts);
         watchedFormState.processState = processStatuses.FINISHED;
-        startFeedUpdateTimer(urlWithCorsApi, id, watchedContentState);
+        startFeedUpdateTimer(urlWithCorsApi, id, state.posts, watchedContentState);
       })
       .catch((err) => {
         watchedFormState.error = errorMessages.NETWORK;

@@ -13,23 +13,23 @@ const renderFeed = (feed) => {
 };
 
 export default (state) => onChange(state, (path, current, previous) => {
-  if (_.isEqual(current, previous) || !path.startsWith('postsByFeedId')) {
+  if (_.isEqual(current, previous) || path === 'feeds') {
     return;
   }
 
-  const { feeds, postsByFeedId } = state;
+  const { feeds, posts } = state;
 
-  console.log(postsByFeedId);
-
-  const differenceBetweenPosts = _.differenceWith(previous, current, _.isEqual);
-
-  if (_.isEmpty(differenceBetweenPosts) && !_.isNil(previous)) return;
+  const postsByFeedId = posts.reduce((acc, post) => {
+    const { feedId } = post;
+    const alreadyExistsPostsInAcc = acc[feedId] || [];
+    return { ...acc, [feedId]: [...alreadyExistsPostsInAcc, post] };
+  }, {});
 
   const feedsContainer = document.getElementById('feeds');
   feedsContainer.innerHTML = feeds
     .map((feed) => {
-      const posts = postsByFeedId[feed.id];
-      return renderFeed({ ...feed, posts });
+      const currentPosts = postsByFeedId[feed.id];
+      return renderFeed({ ...feed, posts: currentPosts });
     })
     .join('');
 });
