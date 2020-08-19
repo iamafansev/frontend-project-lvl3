@@ -13,14 +13,21 @@ const FEEDS_UPDATE_DELAY = 5000;
 const CORS_API_URL = 'https://cors-anywhere.herokuapp.com/';
 const buildUrlWithCorsApi = (url) => `${CORS_API_URL}${url}`;
 
+const assignIdsToData = (feedId) => ({ items: posts, ...feed }) => {
+  const id = feedId || _.uniqueId();
+  const feedWithId = { ...feed, id };
+  const postsWithFeedId = posts.map((post) => ({ ...post, feedId }));
+
+  return { id, feed: feedWithId, posts: postsWithFeedId };
+};
+
 const startFeedUpdateTimer = (url, feedId, watchedState) => {
   setTimeout(
     () => axios.get(url)
-      .then(({ data }) => {
-        const { items: posts } = parseFeed(data);
-        const postsWithFeedId = posts.map((post) => ({ ...post, feedId }));
-
-        watchedState.postsByFeedId[feedId] = postsWithFeedId;
+      .then(({ data }) => parseFeed(data))
+      .then(assignIdsToData(feedId))
+      .then(({ posts }) => {
+        watchedState.postsByFeedId[feedId] = posts;
       })
       .finally(() => startFeedUpdateTimer(url, feedId, watchedState)),
     FEEDS_UPDATE_DELAY,
@@ -67,16 +74,11 @@ export default function App() {
 
     axios.get(urlWithCorsApi)
       .then(({ data }) => parseFeed(data))
-      .then((parsedData) => {
-        const { items: posts, ...feed } = parsedData;
-        const id = _.uniqueId();
-        const feedWithId = { ...feed, id };
-        const postsWithFeedId = posts.map((post) => ({ ...post, feedId: id }));
-
-        watchedContentState.feeds = [feedWithId, ...watchedContentState.feeds];
-        watchedContentState.postsByFeedId[id] = postsWithFeedId;
+      .then(assignIdsToData())
+      .then(({ id, posts, feed }) => {
+        watchedContentState.feeds = [feed, ...watchedContentState.feeds];
+        watchedContentState.postsByFeedId[id] = posts;
         watchedFormState.processState = processStatuses.FINISHED;
-
         startFeedUpdateTimer(urlWithCorsApi, id, watchedContentState);
       })
       .catch((err) => {

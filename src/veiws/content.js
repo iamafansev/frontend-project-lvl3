@@ -19,6 +19,8 @@ export default (state) => onChange(state, (path, current, previous) => {
 
   const { feeds, postsByFeedId } = state;
 
+  console.log(postsByFeedId);
+
   const differenceBetweenPosts = _.differenceWith(previous, current, _.isEqual);
 
   if (_.isEmpty(differenceBetweenPosts) && !_.isNil(previous)) return;
