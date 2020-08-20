@@ -16,6 +16,12 @@ const parseItem = (itemNode) => {
 export default (data) => {
   const parser = new DOMParser();
   const doc = parser.parseFromString(data, 'application/xml');
+  const error = _.first(doc.getElementsByTagName('parsererror'));
+
+  if (error) {
+    const { textContent: errorMessage } = error;
+    throw new Error(errorMessage);
+  }
 
   const title = _.first(doc.getElementsByTagName('title'));
   const description = _.first(doc.getElementsByTagName('description'));
