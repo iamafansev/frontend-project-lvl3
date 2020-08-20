@@ -21,23 +21,30 @@ const assignIdsToData = (feedId) => ({ items: posts, ...feed }) => {
   return { id, feed: feedWithId, posts: postsWithFeedId };
 };
 
-const startFeedUpdateTimer = (url, feedId, previousPosts, watchedState) => {
+const startFeedsUpdateTimer = (previousPosts, watchedContentState) => {
   let nextPosts = previousPosts;
-  setTimeout(
-    () => axios.get(url)
-      .then(({ data }) => parseFeed(data))
-      .then(assignIdsToData(feedId))
-      .then(({ posts }) => {
-        const difference = _.differenceWith(posts, previousPosts, _.isEqual);
 
-        if (!_.isEmpty(difference)) {
-          nextPosts = [...difference, ...previousPosts];
-          watchedState.posts = nextPosts;
-        }
-      })
-      .finally(() => startFeedUpdateTimer(url, feedId, nextPosts, watchedState)),
-    FEEDS_UPDATE_DELAY,
-  );
+  setTimeout(() => {
+    const promises = watchedContentState.feeds.map(({ id, link }) => {
+      const urlWithCorsApi = buildUrlWithCorsApi(link);
+
+      return axios.get(urlWithCorsApi)
+        .then(({ data }) => parseFeed(data))
+        .then(assignIdsToData(id))
+        .then(({ posts }) => {
+          const difference = _.differenceWith(posts, previousPosts, _.isEqual);
+
+          if (!_.isEmpty(difference)) {
+            nextPosts = [...difference, ...previousPosts];
+            watchedContentState.posts = nextPosts;
+          }
+        });
+    });
+
+    Promise
+      .all(promises)
+      .finally(() => startFeedsUpdateTimer(nextPosts, watchedContentState));
+  }, FEEDS_UPDATE_DELAY);
 };
 
 const updateValidationState = (error, watchedState) => {
@@ -81,11 +88,15 @@ export default function App() {
     axios.get(urlWithCorsApi)
       .then(({ data }) => parseFeed(data))
       .then(assignIdsToData())
-      .then(({ id, posts, feed }) => {
-        watchedContentState.feeds = [feed, ...watchedContentState.feeds];
+      .then(({ posts, feed }) => {
+        const feedWithLink = { link: urlFieldValue, ...feed };
+        watchedContentState.feeds = [feedWithLink, ...watchedContentState.feeds];
         watchedContentState.posts.push(...posts);
         watchedFormState.processState = processStatuses.FINISHED;
-        startFeedUpdateTimer(urlWithCorsApi, id, state.posts, watchedContentState);
+
+        if (watchedContentState.feeds.length === 1) {
+          startFeedsUpdateTimer(state.posts, watchedContentState);
+        }
       })
       .catch((err) => {
         watchedFormState.error = errorMessages.NETWORK;
