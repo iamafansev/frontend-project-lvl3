@@ -52,7 +52,7 @@ const updateValidationState = (error, watchedState) => {
   watchedState.error = error;
 };
 
-export default function App() {
+export default () => {
   const state = {
     form: {
       processState: processStatuses.FILLING,
@@ -65,9 +65,19 @@ export default function App() {
 
   const form = document.querySelector('[data-form="rss-form"]');
   const urlField = form.elements.url;
+  const submitButton = document.getElementById('submit-rss-form');
+  const feedbackElement = document.querySelector('.feedback');
+  const feedsContainer = document.getElementById('feeds');
 
-  const watchedFormState = composeWatchedFormState(state.form);
-  const watchedContentState = composeWatchedContentState(_.omit(state, ['form']));
+  const watchedFormState = composeWatchedFormState(state.form, {
+    urlField,
+    submitButton,
+    feedbackElement,
+  });
+  const watchedContentState = composeWatchedContentState(
+    _.omit(state, ['form']),
+    { feedsContainer },
+  );
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -104,4 +114,4 @@ export default function App() {
         throw err;
       });
   });
-}
+};

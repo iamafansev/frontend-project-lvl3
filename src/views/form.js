@@ -7,12 +7,7 @@ import {
   successMessages,
 } from '../constants';
 
-const form = document.querySelector('[data-form="rss-form"]');
-const urlField = form.elements.url;
-const submitButton = document.getElementById('submit-rss-form');
-const feedbackElement = document.querySelector('.feedback');
-
-const renderFeedbackMessage = ({ type, message }) => {
+const renderFeedbackMessage = ({ type, message }, { urlField, feedbackElement }) => {
   urlField.classList.remove('is-invalid');
   feedbackElement.classList.remove('text-danger');
   feedbackElement.classList.remove('text-success');
@@ -30,7 +25,7 @@ const renderFeedbackMessage = ({ type, message }) => {
   feedbackElement.textContent = message;
 };
 
-const processStateHandler = (processState) => {
+const processStateHandler = (processState, { urlField, submitButton, feedbackElement }) => {
   switch (processState) {
     case processStatuses.FAILED:
       submitButton.disabled = false;
@@ -44,24 +39,37 @@ const processStateHandler = (processState) => {
     case processStatuses.FINISHED:
       submitButton.disabled = false;
       urlField.value = '';
-      renderFeedbackMessage({ type: systemStatuses.SUCCESS, message: successMessages.RSS_LOADED });
+      renderFeedbackMessage(
+        { type: systemStatuses.SUCCESS, message: successMessages.RSS_LOADED },
+        { urlField, feedbackElement },
+      );
       break;
     default:
       throw new Error(`Unknown state: ${processState}`);
   }
 };
 
-export default (state) => onChange(state, (path, value) => {
+export default (
+  state,
+  {
+    urlField,
+    submitButton,
+    feedbackElement,
+  },
+) => onChange(state, (path, value) => {
   switch (path) {
     case 'processState':
-      processStateHandler(value);
+      processStateHandler(value, { urlField, submitButton, feedbackElement });
       break;
     case 'valid':
       submitButton.disabled = !value;
       break;
     case 'error':
       submitButton.disabled = false;
-      renderFeedbackMessage({ type: systemStatuses.ERROR, message: value });
+      renderFeedbackMessage(
+        { type: systemStatuses.ERROR, message: value },
+        { urlField, feedbackElement },
+      );
       break;
     default:
       break;

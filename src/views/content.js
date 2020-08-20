@@ -1,5 +1,5 @@
+/* eslint-disable no-param-reassign */
 import onChange from 'on-change';
-import * as _ from 'lodash';
 
 const renderPost = ({ link, title }) => (
   `<div><a href="${link}" target="_blank">${title}</a></div>`
@@ -12,8 +12,8 @@ const renderFeed = (feed) => {
   return [title, posts].join('');
 };
 
-export default (state) => onChange(state, (path, current, previous) => {
-  if (_.isEqual(current, previous) || path === 'feeds') {
+export default (state, { feedsContainer }) => onChange(state, (path) => {
+  if (path === 'feeds') {
     return;
   }
 
@@ -25,7 +25,6 @@ export default (state) => onChange(state, (path, current, previous) => {
     return { ...acc, [feedId]: [...alreadyExistsPostsInAcc, post] };
   }, {});
 
-  const feedsContainer = document.getElementById('feeds');
   feedsContainer.innerHTML = feeds
     .map((feed) => {
       const currentPosts = postsByFeedId[feed.id];
