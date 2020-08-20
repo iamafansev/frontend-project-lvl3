@@ -1,10 +1,10 @@
 /* eslint-disable no-param-reassign, no-console  */
 import onChange from 'on-change';
+import i18n from 'i18next';
 
 import {
   systemStatuses,
   processStatuses,
-  successMessages,
 } from '../constants';
 
 const renderFeedbackMessage = ({ type, message }, { urlField, feedbackElement }) => {
@@ -40,12 +40,12 @@ const processStateHandler = (processState, { urlField, submitButton, feedbackEle
       submitButton.disabled = false;
       urlField.value = '';
       renderFeedbackMessage(
-        { type: systemStatuses.SUCCESS, message: successMessages.RSS_LOADED },
+        { type: systemStatuses.SUCCESS, message: i18n.t('loadedSuccess') },
         { urlField, feedbackElement },
       );
       break;
     default:
-      throw new Error(`Unknown state: ${processState}`);
+      throw new Error(i18n.t('unknownState', { processState }));
   }
 };
 

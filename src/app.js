@@ -1,8 +1,10 @@
 /* eslint-disable no-param-reassign, no-console  */
 import * as _ from 'lodash';
 import axios from 'axios';
+import i18n from 'i18next';
 
-import { processStatuses, errorMessages } from './constants';
+import resources from './locales';
+import { processStatuses } from './constants';
 import validate from './helpers/validate';
 import parseFeed from './helpers/parseFeed';
 import composeWatchedFormState from './views/form';
@@ -52,7 +54,7 @@ const updateValidationState = (error, watchedState) => {
   watchedState.error = error;
 };
 
-export default () => {
+export default async () => {
   const state = {
     form: {
       processState: processStatuses.FILLING,
@@ -62,6 +64,12 @@ export default () => {
     feeds: [],
     posts: [],
   };
+
+  await i18n.init({
+    lng: 'en',
+    debug: true,
+    resources,
+  });
 
   const form = document.querySelector('[data-form="rss-form"]');
   const urlField = form.elements.url;
@@ -109,7 +117,7 @@ export default () => {
         }
       })
       .catch((err) => {
-        watchedFormState.error = errorMessages.NETWORK;
+        watchedFormState.error = i18n.t('errors.network');
         watchedFormState.processState = processStatuses.FAILED;
         throw err;
       });
