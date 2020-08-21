@@ -55,6 +55,7 @@ const updateValidationState = (error, watchedState) => {
 };
 
 export default async () => {
+  let isStartedFeedsUpdater = false;
   const state = {
     form: {
       processState: processStatuses.FILLING,
@@ -112,8 +113,9 @@ export default async () => {
         watchedContentState.posts.push(...posts);
         watchedFormState.processState = processStatuses.FINISHED;
 
-        if (watchedContentState.feeds.length === 1) {
+        if (!isStartedFeedsUpdater) {
           startFeedsUpdateTimer(state.posts, watchedContentState);
+          isStartedFeedsUpdater = true;
         }
       })
       .catch((err) => {
