@@ -27,10 +27,10 @@ export default (data) => {
     throw error;
   }
 
-  const title = _.first(doc.getElementsByTagName('title'));
-  const description = _.first(doc.getElementsByTagName('description'));
+  const { textContent: title } = _.first(doc.getElementsByTagName('title')) || {};
+  const { textContent: description } = _.first(doc.getElementsByTagName('description')) || {};
   const itemNodes = doc.getElementsByTagName('item');
   const items = _.map(itemNodes, parseItem);
 
-  return { title: title.textContent, description: description.textContent, items };
+  return { title, description, items };
 };
