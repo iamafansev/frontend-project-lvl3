@@ -4,7 +4,7 @@ import axios from 'axios';
 import i18n from 'i18next';
 
 import resources from './locales';
-import { processStatuses } from './constants';
+import { processStatuses, errorTypes } from './constants';
 import validate from './helpers/validate';
 import parseFeed from './helpers/parseFeed';
 import composeWatchedFormState from './views/form';
@@ -68,7 +68,6 @@ export default async () => {
 
   await i18n.init({
     lng: 'en',
-    debug: true,
     resources,
   });
 
@@ -119,7 +118,12 @@ export default async () => {
         }
       })
       .catch((err) => {
-        watchedFormState.error = i18n.t('errors.network');
+        if (err.name === errorTypes.PARSE) {
+          watchedFormState.error = i18n.t('errors.parseFeed');
+        } else {
+          watchedFormState.error = i18n.t('errors.network');
+        }
+
         watchedFormState.processState = processStatuses.FAILED;
         throw err;
       });

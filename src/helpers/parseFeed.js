@@ -1,5 +1,7 @@
 import _ from 'lodash';
 
+import { errorTypes } from '../constants';
+
 const parseItem = (itemNode) => {
   const elements = itemNode.childNodes;
   const result = { title: '', link: '' };
@@ -16,11 +18,13 @@ const parseItem = (itemNode) => {
 export default (data) => {
   const parser = new DOMParser();
   const doc = parser.parseFromString(data, 'application/xml');
-  const error = _.first(doc.getElementsByTagName('parsererror'));
+  const errorElement = _.first(doc.getElementsByTagName('parsererror'));
 
-  if (error) {
-    const { textContent: errorMessage } = error;
-    throw new Error(errorMessage);
+  if (errorElement) {
+    const { textContent: errorMessage } = errorElement;
+    const error = new Error(errorMessage);
+    error.name = errorTypes.PARSE;
+    throw error;
   }
 
   const title = _.first(doc.getElementsByTagName('title'));

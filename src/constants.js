@@ -9,3 +9,7 @@ export const systemStatuses = {
   SUCCESS: 'success',
   ERROR: 'error',
 };
+
+export const errorTypes = {
+  PARSE: 'ParseError',
+};
