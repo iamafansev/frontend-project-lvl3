@@ -7,13 +7,12 @@ import resources from './locales';
 import { processStatuses, errorTypes } from './constants';
 import validate from './helpers/validate';
 import parseFeed from './helpers/parseFeed';
-import composeWatchedFormState from './views/form';
-import composeWatchedContentState from './views/content';
+import composeWatchedState from './view';
 
 const FEEDS_UPDATE_DELAY = 5000;
 
-const CORS_API_URL = 'https://cors-anywhere.herokuapp.com/';
-const buildUrlWithCorsApi = (url) => `${CORS_API_URL}${url}`;
+const CORS_PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
+const buildUrlWithCorsProxy = (url) => `${CORS_PROXY_URL}${url}`;
 
 const assignIdsToData = (feedId) => ({ items: posts, ...feed }) => {
   const id = feedId || _.uniqueId();
@@ -23,38 +22,40 @@ const assignIdsToData = (feedId) => ({ items: posts, ...feed }) => {
   return { id, feed: feedWithId, posts: postsWithFeedId };
 };
 
-const startFeedsUpdateTimer = (previousPosts, watchedContentState) => {
+const getParsedFeedData = (urlWithCorsApi, id = null) => axios.get(urlWithCorsApi)
+  .then(({ data }) => parseFeed(data))
+  .then(assignIdsToData(id));
+
+const startFeedsUpdater = (previousPosts, watchedState) => {
   let nextPosts = previousPosts;
 
   setTimeout(() => {
-    const promises = watchedContentState.feeds.map(({ id, link }) => {
-      const urlWithCorsApi = buildUrlWithCorsApi(link);
+    const promises = watchedState.feeds.map(({ id, link }) => {
+      const urlWithCorsApi = buildUrlWithCorsProxy(link);
 
-      return axios.get(urlWithCorsApi)
-        .then(({ data }) => parseFeed(data))
-        .then(assignIdsToData(id))
+      return getParsedFeedData(urlWithCorsApi, id)
         .then(({ posts }) => {
           const difference = _.differenceWith(posts, previousPosts, _.isEqual);
 
           if (!_.isEmpty(difference)) {
             nextPosts = [...difference, ...previousPosts];
-            watchedContentState.posts = nextPosts;
+            watchedState.posts = nextPosts;
           }
         });
     });
 
     Promise
       .all(promises)
-      .finally(() => startFeedsUpdateTimer(nextPosts, watchedContentState));
+      .finally(() => startFeedsUpdater(nextPosts, watchedState));
   }, FEEDS_UPDATE_DELAY);
 };
 
 const updateValidationState = (error, watchedState) => {
-  watchedState.valid = !error;
-  watchedState.error = error;
+  watchedState.form.valid = !error;
+  watchedState.form.error = error;
 };
 
-export default async () => {
+export default () => {
   let isStartedFeedsUpdater = false;
   const state = {
     form: {
@@ -66,65 +67,60 @@ export default async () => {
     posts: [],
   };
 
-  await i18n.init({
+  i18n.init({
     lng: 'en',
     resources,
   });
 
-  const form = document.querySelector('[data-form="rss-form"]');
-  const urlField = form.elements.url;
+  const form = document.getElementById('rss-form');
+  const urlField = document.getElementById('url');
   const submitButton = document.getElementById('submit-rss-form');
-  const feedbackElement = document.querySelector('.feedback');
+  const feedbackElement = document.getElementById('feedback');
   const feedsContainer = document.getElementById('feeds');
 
-  const watchedFormState = composeWatchedFormState(state.form, {
+  const watchedState = composeWatchedState(state, {
     urlField,
     submitButton,
     feedbackElement,
+    feedsContainer,
   });
-  const watchedContentState = composeWatchedContentState(
-    _.omit(state, ['form']),
-    { feedsContainer },
-  );
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    const urlFieldValue = urlField.value.trim();
-    const alreadyUsedRssLinks = watchedContentState.feeds.map(({ link }) => link);
+    const urlFieldValue = new FormData(form).get('url').trim();
+    const alreadyUsedRssLinks = watchedState.feeds.map(({ link }) => link);
 
     const error = validate(urlFieldValue, alreadyUsedRssLinks);
     const isValidForm = !error;
 
-    updateValidationState(error, watchedFormState);
+    updateValidationState(error, watchedState);
 
     if (!isValidForm) return;
 
-    watchedFormState.processState = processStatuses.SENDING;
+    watchedState.form.processState = processStatuses.SENDING;
 
-    const urlWithCorsApi = buildUrlWithCorsApi(urlFieldValue);
+    const urlWithCorsApi = buildUrlWithCorsProxy(urlFieldValue);
 
-    axios.get(urlWithCorsApi)
-      .then(({ data }) => parseFeed(data))
-      .then(assignIdsToData())
+    getParsedFeedData(urlWithCorsApi)
       .then(({ posts, feed }) => {
         const feedWithLink = { link: urlFieldValue, ...feed };
-        watchedContentState.feeds = [feedWithLink, ...watchedContentState.feeds];
-        watchedContentState.posts.push(...posts);
-        watchedFormState.processState = processStatuses.FINISHED;
+        watchedState.feeds = [feedWithLink, ...watchedState.feeds];
+        watchedState.posts.push(...posts);
+        watchedState.form.processState = processStatuses.FINISHED;
 
         if (!isStartedFeedsUpdater) {
-          startFeedsUpdateTimer(state.posts, watchedContentState);
+          startFeedsUpdater(state.posts, watchedState);
           isStartedFeedsUpdater = true;
         }
       })
       .catch((err) => {
         if (err.name === errorTypes.PARSE) {
-          watchedFormState.error = i18n.t('errors.parseFeed');
+          watchedState.form.error = i18n.t('errors.parseFeed');
         } else {
-          watchedFormState.error = i18n.t('errors.network');
+          watchedState.form.error = i18n.t('errors.network');
         }
 
-        watchedFormState.processState = processStatuses.FAILED;
+        watchedState.form.processState = processStatuses.FAILED;
         throw err;
       });
   });

@@ -5,7 +5,18 @@ import i18n from 'i18next';
 import {
   systemStatuses,
   processStatuses,
-} from '../constants';
+} from './constants';
+
+const renderPost = ({ link, title }) => (
+  `<div><a href="${link}" target="_blank">${title}</a></div>`
+);
+
+const renderFeed = (feed) => {
+  const title = `<h2>${feed.title}</h2>`;
+  const posts = feed.posts.map(renderPost).join('');
+
+  return [title, posts].join('');
+};
 
 const renderFeedbackMessage = ({ type, message }, { urlField, feedbackElement }) => {
   urlField.classList.remove('is-invalid');
@@ -23,6 +34,21 @@ const renderFeedbackMessage = ({ type, message }, { urlField, feedbackElement })
   }
 
   feedbackElement.textContent = message;
+};
+
+const renderFeeds = (feeds, posts, { feedsContainer }) => {
+  const postsByFeedId = posts.reduce((acc, post) => {
+    const { feedId } = post;
+    const alreadyExistsPostsInAcc = acc[feedId] || [];
+    return { ...acc, [feedId]: [...alreadyExistsPostsInAcc, post] };
+  }, {});
+
+  feedsContainer.innerHTML = feeds
+    .map((feed) => {
+      const currentPosts = postsByFeedId[feed.id];
+      return renderFeed({ ...feed, posts: currentPosts });
+    })
+    .join('');
 };
 
 const processStateHandler = (processState, { urlField, submitButton, feedbackElement }) => {
@@ -55,21 +81,25 @@ export default (
     urlField,
     submitButton,
     feedbackElement,
+    feedsContainer,
   },
 ) => onChange(state, (path, value) => {
   switch (path) {
-    case 'processState':
+    case 'form.processState':
       processStateHandler(value, { urlField, submitButton, feedbackElement });
       break;
-    case 'valid':
+    case 'form.valid':
       submitButton.disabled = !value;
       break;
-    case 'error':
+    case 'form.error':
       submitButton.disabled = false;
       renderFeedbackMessage(
         { type: systemStatuses.ERROR, message: value },
         { urlField, feedbackElement },
       );
+      break;
+    case 'posts':
+      renderFeeds(state.feeds, state.posts, { feedsContainer });
       break;
     default:
       break;
