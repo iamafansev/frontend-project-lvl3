@@ -1,4 +1,3 @@
-/* eslint-disable no-param-reassign, no-console  */
 import * as _ from 'lodash';
 import axios from 'axios';
 import i18n from 'i18next';
@@ -26,27 +25,26 @@ const getParsedFeedData = (urlWithCorsApi, id = null) => axios.get(urlWithCorsAp
   .then(({ data }) => parseFeed(data))
   .then(assignIdsToData(id));
 
-const startFeedsUpdater = (previousPosts, watchedState) => {
-  let nextPosts = previousPosts;
+const startFeedsUpdater = (watchedState) => {
+  const { feeds, posts } = watchedState;
 
   setTimeout(() => {
-    const promises = watchedState.feeds.map(({ id, link }) => {
+    const promises = feeds.map(({ id, link }) => {
       const urlWithCorsApi = buildUrlWithCorsProxy(link);
 
       return getParsedFeedData(urlWithCorsApi, id)
-        .then(({ posts }) => {
-          const difference = _.differenceWith(posts, previousPosts, _.isEqual);
+        .then((data) => {
+          const difference = _.differenceWith(data.posts, posts, _.isEqual);
 
           if (!_.isEmpty(difference)) {
-            nextPosts = [...difference, ...previousPosts];
-            watchedState.posts = nextPosts;
+            watchedState.posts = [...difference, ...posts];
           }
         });
     });
 
     Promise
       .all(promises)
-      .finally(() => startFeedsUpdater(nextPosts, watchedState));
+      .finally(() => startFeedsUpdater(watchedState));
   }, FEEDS_UPDATE_DELAY);
 };
 
@@ -56,6 +54,13 @@ const updateValidationState = (error, watchedState) => {
 };
 
 export default () => {
+  i18n.init({
+    lng: 'en',
+    resources,
+  }).catch((err) => {
+    throw err;
+  });
+
   let isStartedFeedsUpdater = false;
   const state = {
     form: {
@@ -67,27 +72,18 @@ export default () => {
     posts: [],
   };
 
-  i18n.init({
-    lng: 'en',
-    resources,
-  });
-
   const form = document.getElementById('rss-form');
-  const urlField = document.getElementById('url');
-  const submitButton = document.getElementById('submit-rss-form');
-  const feedbackElement = document.getElementById('feedback');
-  const feedsContainer = document.getElementById('feeds');
 
   const watchedState = composeWatchedState(state, {
-    urlField,
-    submitButton,
-    feedbackElement,
-    feedsContainer,
+    urlField: document.getElementById('url'),
+    submitButton: document.getElementById('submit-rss-form'),
+    feedbackElement: document.getElementById('feedback'),
+    feedsContainer: document.getElementById('feeds'),
   });
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    const urlFieldValue = new FormData(form).get('url').trim();
+    const urlFieldValue = new FormData(e.target).get('url').trim();
     const alreadyUsedRssLinks = watchedState.feeds.map(({ link }) => link);
 
     const error = validate(urlFieldValue, alreadyUsedRssLinks);
@@ -99,9 +95,9 @@ export default () => {
 
     watchedState.form.processState = processStatuses.SENDING;
 
-    const urlWithCorsApi = buildUrlWithCorsProxy(urlFieldValue);
+    const urlWithCorsProxy = buildUrlWithCorsProxy(urlFieldValue);
 
-    getParsedFeedData(urlWithCorsApi)
+    getParsedFeedData(urlWithCorsProxy)
       .then(({ posts, feed }) => {
         const feedWithLink = { link: urlFieldValue, ...feed };
         watchedState.feeds = [feedWithLink, ...watchedState.feeds];
@@ -109,7 +105,7 @@ export default () => {
         watchedState.form.processState = processStatuses.FINISHED;
 
         if (!isStartedFeedsUpdater) {
-          startFeedsUpdater(state.posts, watchedState);
+          startFeedsUpdater(watchedState);
           isStartedFeedsUpdater = true;
         }
       })

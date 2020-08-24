@@ -1,4 +1,3 @@
-/* eslint-disable no-param-reassign, no-console  */
 import onChange from 'on-change';
 import i18n from 'i18next';
 
@@ -6,6 +5,14 @@ import {
   systemStatuses,
   processStatuses,
 } from './constants';
+
+let isSetElements = false;
+const elements = {
+  urlField: null,
+  submitButton: null,
+  feedbackElement: null,
+  feedsContainer: null,
+};
 
 const renderPost = ({ link, title }) => (
   `<div><a href="${link}" target="_blank">${title}</a></div>`
@@ -18,32 +25,32 @@ const renderFeed = (feed) => {
   return [title, posts].join('');
 };
 
-const renderFeedbackMessage = ({ type, message }, { urlField, feedbackElement }) => {
-  urlField.classList.remove('is-invalid');
-  feedbackElement.classList.remove('text-danger');
-  feedbackElement.classList.remove('text-success');
-  feedbackElement.textContent = '';
+const renderFeedbackMessage = ({ type, message }) => {
+  elements.urlField.classList.remove('is-invalid');
+  elements.feedbackElement.classList.remove('text-danger');
+  elements.feedbackElement.classList.remove('text-success');
+  elements.feedbackElement.textContent = '';
 
   if (type === systemStatuses.SUCCESS) {
-    feedbackElement.classList.add('text-success');
+    elements.feedbackElement.classList.add('text-success');
   }
 
   if (type === systemStatuses.ERROR) {
-    feedbackElement.classList.add('text-danger');
-    urlField.classList.add('is-invalid');
+    elements.feedbackElement.classList.add('text-danger');
+    elements.urlField.classList.add('is-invalid');
   }
 
-  feedbackElement.textContent = message;
+  elements.feedbackElement.textContent = message;
 };
 
-const renderFeeds = (feeds, posts, { feedsContainer }) => {
+const renderFeeds = (feeds, posts) => {
   const postsByFeedId = posts.reduce((acc, post) => {
     const { feedId } = post;
     const alreadyExistsPostsInAcc = acc[feedId] || [];
     return { ...acc, [feedId]: [...alreadyExistsPostsInAcc, post] };
   }, {});
 
-  feedsContainer.innerHTML = feeds
+  elements.feedsContainer.innerHTML = feeds
     .map((feed) => {
       const currentPosts = postsByFeedId[feed.id];
       return renderFeed({ ...feed, posts: currentPosts });
@@ -51,28 +58,31 @@ const renderFeeds = (feeds, posts, { feedsContainer }) => {
     .join('');
 };
 
-const processStateHandler = (processState, { urlField, submitButton, feedbackElement }) => {
+const processStateHandler = (processState) => {
   switch (processState) {
     case processStatuses.FAILED:
-      submitButton.disabled = false;
+      elements.submitButton.disabled = false;
       break;
     case processStatuses.FILLING:
-      submitButton.disabled = false;
+      elements.submitButton.disabled = false;
       break;
     case processStatuses.SENDING:
-      submitButton.disabled = true;
+      elements.submitButton.disabled = true;
       break;
     case processStatuses.FINISHED:
-      submitButton.disabled = false;
-      urlField.value = '';
+      elements.submitButton.disabled = false;
+      elements.urlField.value = '';
       renderFeedbackMessage(
         { type: systemStatuses.SUCCESS, message: i18n.t('loadedSuccess') },
-        { urlField, feedbackElement },
       );
       break;
     default:
       throw new Error(i18n.t('unknownState', { processState }));
   }
+};
+
+const renderSubmitButton = (isDisabled) => {
+  elements.submitButton.disabled = isDisabled;
 };
 
 export default (
@@ -84,22 +94,29 @@ export default (
     feedsContainer,
   },
 ) => onChange(state, (path, value) => {
+  if (!isSetElements) {
+    elements.urlField = urlField;
+    elements.submitButton = submitButton;
+    elements.feedbackElement = feedbackElement;
+    elements.feedsContainer = feedsContainer;
+    isSetElements = true;
+  }
+
   switch (path) {
     case 'form.processState':
-      processStateHandler(value, { urlField, submitButton, feedbackElement });
+      processStateHandler(value);
       break;
     case 'form.valid':
-      submitButton.disabled = !value;
+      renderSubmitButton(!value);
       break;
     case 'form.error':
-      submitButton.disabled = false;
+      renderSubmitButton(false, { submitButton });
       renderFeedbackMessage(
         { type: systemStatuses.ERROR, message: value },
-        { urlField, feedbackElement },
       );
       break;
     case 'posts':
-      renderFeeds(state.feeds, state.posts, { feedsContainer });
+      renderFeeds(state.feeds, state.posts);
       break;
     default:
       break;
