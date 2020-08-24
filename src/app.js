@@ -53,14 +53,7 @@ const updateValidationState = (error, watchedState) => {
   watchedState.form.error = error;
 };
 
-export default () => {
-  i18n.init({
-    lng: 'en',
-    resources,
-  }).catch((err) => {
-    throw err;
-  });
-
+const app = () => {
   let isStartedFeedsUpdater = false;
   const state = {
     form: {
@@ -74,12 +67,14 @@ export default () => {
 
   const form = document.getElementById('rss-form');
 
-  const watchedState = composeWatchedState(state, {
+  const elements = {
     urlField: document.getElementById('url'),
     submitButton: document.getElementById('submit-rss-form'),
     feedbackElement: document.getElementById('feedback'),
     feedsContainer: document.getElementById('feeds'),
-  });
+  };
+
+  const watchedState = composeWatchedState(state, elements);
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -120,4 +115,11 @@ export default () => {
         throw err;
       });
   });
+};
+
+export default () => {
+  i18n.init({
+    lng: 'en',
+    resources,
+  }).then(app);
 };
