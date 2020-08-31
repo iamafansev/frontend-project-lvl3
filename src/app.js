@@ -77,10 +77,12 @@ const app = () => {
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    const urlFieldValue = new FormData(e.target).get('url').trim();
+    const formData = new FormData(e.target);
+    const urlFieldValue = formData.get('url');
+    const trimedUrlFieldValue = urlFieldValue.trim();
     const alreadyUsedRssLinks = watchedState.feeds.map(({ link }) => link);
 
-    const error = validate(urlFieldValue, alreadyUsedRssLinks);
+    const error = validate(trimedUrlFieldValue, alreadyUsedRssLinks);
     const isValidForm = !error;
 
     updateValidationState(error, watchedState);
@@ -89,11 +91,11 @@ const app = () => {
 
     watchedState.form.processState = processStatuses.SENDING;
 
-    const urlWithCorsProxy = buildUrlWithCorsProxy(urlFieldValue);
+    const urlWithCorsProxy = buildUrlWithCorsProxy(trimedUrlFieldValue);
 
     getParsedFeedData(urlWithCorsProxy)
       .then(({ posts, feed }) => {
-        const feedWithLink = { link: urlFieldValue, ...feed };
+        const feedWithLink = { link: trimedUrlFieldValue, ...feed };
         watchedState.feeds = [feedWithLink, ...watchedState.feeds];
         watchedState.posts.push(...posts);
         watchedState.form.processState = processStatuses.FINISHED;

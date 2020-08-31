@@ -6,6 +6,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install modules
-      run: make install
+      run: make ci
     - name: Run ESLint
       run: make lint
