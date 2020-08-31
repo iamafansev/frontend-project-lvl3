@@ -6,6 +6,17 @@ import {
   processStatuses,
 } from './constants';
 
+const renderPost = ({ link, title }) => (
+  `<div><a href="${link}" target="_blank">${title}</a></div>`
+);
+
+const renderFeed = (feed) => {
+  const title = `<h2>${feed.title}</h2>`;
+  const posts = feed.posts.map(renderPost).join('');
+
+  return [title, posts].join('');
+};
+
 export default (state, elements) => {
   const {
     urlField,
@@ -14,21 +25,9 @@ export default (state, elements) => {
     feedsContainer,
   } = elements;
 
-  const renderPost = ({ link, title }) => (
-    `<div><a href="${link}" target="_blank">${title}</a></div>`
-  );
-
-  const renderFeed = (feed) => {
-    const title = `<h2>${feed.title}</h2>`;
-    const posts = feed.posts.map(renderPost).join('');
-
-    return [title, posts].join('');
-  };
-
   const renderFeedbackMessage = ({ type, message }) => {
     urlField.classList.remove('is-invalid');
-    feedbackElement.classList.remove('text-danger');
-    feedbackElement.classList.remove('text-success');
+    feedbackElement.classList.remove('text-danger', 'text-success');
     feedbackElement.textContent = '';
 
     if (type === systemStatuses.SUCCESS) {
@@ -43,19 +42,24 @@ export default (state, elements) => {
     feedbackElement.textContent = message;
   };
 
+  const changeDisabledPropertyOfFormElements = (isDisabled) => {
+    submitButton.disabled = isDisabled;
+    urlField.disabled = isDisabled;
+  };
+
   const processStateHandler = (processState) => {
     switch (processState) {
       case processStatuses.FAILED:
-        submitButton.disabled = false;
+        changeDisabledPropertyOfFormElements(false);
         break;
       case processStatuses.FILLING:
-        submitButton.disabled = false;
+        changeDisabledPropertyOfFormElements(false);
         break;
       case processStatuses.SENDING:
-        submitButton.disabled = true;
+        changeDisabledPropertyOfFormElements(true);
         break;
       case processStatuses.FINISHED:
-        submitButton.disabled = false;
+        changeDisabledPropertyOfFormElements(false);
         urlField.value = '';
         renderFeedbackMessage(
           { type: systemStatuses.SUCCESS, message: i18n.t('loadedSuccess') },
@@ -64,10 +68,6 @@ export default (state, elements) => {
       default:
         throw new Error(i18n.t('unknownState', { processState }));
     }
-  };
-
-  const changeDisabledPropertyOfButton = (isDisabled) => {
-    submitButton.disabled = isDisabled;
   };
 
   const renderFeeds = (feeds, posts) => {
@@ -91,10 +91,10 @@ export default (state, elements) => {
         processStateHandler(value);
         break;
       case 'form.valid':
-        changeDisabledPropertyOfButton(true);
+        changeDisabledPropertyOfFormElements(true);
         break;
       case 'form.error':
-        changeDisabledPropertyOfButton(false);
+        changeDisabledPropertyOfFormElements(false);
         renderFeedbackMessage(
           { type: systemStatuses.ERROR, message: value },
         );
