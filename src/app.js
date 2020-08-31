@@ -37,7 +37,7 @@ const startFeedsUpdater = (watchedState) => {
           const difference = _.differenceWith(data.posts, posts, _.isEqual);
 
           if (!_.isEmpty(difference)) {
-            watchedState.posts = [...difference, ...posts];
+            watchedState.posts.unshift(...difference);
           }
         });
     });
@@ -54,7 +54,6 @@ const updateValidationState = (error, watchedState) => {
 };
 
 const app = () => {
-  let isStartedFeedsUpdater = false;
   const state = {
     form: {
       processState: processStatuses.FILLING,
@@ -99,9 +98,8 @@ const app = () => {
         watchedState.posts.push(...posts);
         watchedState.form.processState = processStatuses.FINISHED;
 
-        if (!isStartedFeedsUpdater) {
+        if (state.feeds.length === 1) {
           startFeedsUpdater(watchedState);
-          isStartedFeedsUpdater = true;
         }
       })
       .catch((err) => {

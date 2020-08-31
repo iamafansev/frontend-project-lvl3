@@ -3,22 +3,16 @@ import _ from 'lodash';
 import { errorTypes } from './constants';
 
 const parseItem = (itemNode) => {
-  const elements = itemNode.childNodes;
-  const result = { title: '', link: '' };
+  const { textContent: title } = itemNode.querySelector('title') || {};
+  const { textContent: link } = itemNode.querySelector('link') || {};
 
-  elements.forEach(({ tagName, textContent }) => {
-    if (_.has(result, tagName)) {
-      result[tagName] = textContent;
-    }
-  });
-
-  return result;
+  return { title, link };
 };
 
 export default (data) => {
   const parser = new DOMParser();
   const doc = parser.parseFromString(data, 'application/xml');
-  const errorElement = _.first(doc.getElementsByTagName('parsererror'));
+  const errorElement = doc.querySelector('parsererror');
 
   if (errorElement) {
     const { textContent: errorMessage } = errorElement;
@@ -27,8 +21,8 @@ export default (data) => {
     throw error;
   }
 
-  const { textContent: title } = _.first(doc.getElementsByTagName('title')) || {};
-  const { textContent: description } = _.first(doc.getElementsByTagName('description')) || {};
+  const { textContent: title } = doc.querySelector('title') || {};
+  const { textContent: description } = doc.querySelector('description') || {};
   const itemNodes = doc.getElementsByTagName('item');
   const items = _.map(itemNodes, parseItem);
 
