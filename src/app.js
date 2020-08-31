@@ -4,8 +4,8 @@ import i18n from 'i18next';
 
 import resources from './locales';
 import { processStatuses, errorTypes } from './constants';
-import validate from './helpers/validate';
-import parseFeed from './helpers/parseFeed';
+import validate from './validate';
+import parseFeed from './parseFeed';
 import composeWatchedState from './view';
 
 const FEEDS_UPDATE_DELAY = 5000;

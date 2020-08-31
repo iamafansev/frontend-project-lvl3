@@ -1,6 +1,6 @@
 import _ from 'lodash';
 
-import { errorTypes } from '../constants';
+import { errorTypes } from './constants';
 
 const parseItem = (itemNode) => {
   const elements = itemNode.childNodes;
