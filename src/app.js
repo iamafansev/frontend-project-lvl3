@@ -9,7 +9,6 @@ import parseFeed from './parseFeed';
 import composeWatchedState from './view';
 
 const FEEDS_UPDATE_DELAY = 5000;
-const COUNT_FEEDS_WHEN_NEED_START_UPDATER = 1;
 
 const CORS_PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
 const buildUrlWithCorsProxy = (url) => `${CORS_PROXY_URL}${url}`;
@@ -75,6 +74,7 @@ const app = () => {
   };
 
   const watchedState = composeWatchedState(state, elements);
+  startFeedsUpdater(watchedState);
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -97,13 +97,9 @@ const app = () => {
     getParsedFeedData(urlWithCorsProxy)
       .then(({ posts, feed }) => {
         const feedWithLink = { link: trimedUrlFieldValue, ...feed };
-        watchedState.feeds = [feedWithLink, ...watchedState.feeds];
+        watchedState.feeds.unshift(feedWithLink);
         watchedState.posts.push(...posts);
         watchedState.form.processState = processStatuses.FINISHED;
-
-        if (state.feeds.length === COUNT_FEEDS_WHEN_NEED_START_UPDATER) {
-          startFeedsUpdater(watchedState);
-        }
       })
       .catch((err) => {
         if (err.name === errorTypes.PARSE) {

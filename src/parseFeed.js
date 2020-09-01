@@ -21,8 +21,8 @@ export default (data) => {
     throw error;
   }
 
-  const { textContent: title } = doc.querySelector('title') || {};
-  const { textContent: description } = doc.querySelector('description') || {};
+  const { textContent: title } = doc.querySelector('title:first-of-type') || {};
+  const { textContent: description } = doc.querySelector('description:first-of-type') || {};
   const itemNodes = doc.getElementsByTagName('item');
   const items = _.map(itemNodes, parseItem);
 
