@@ -80,10 +80,10 @@ const app = () => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const urlFieldValue = formData.get('url');
-    const trimedUrlFieldValue = urlFieldValue.trim();
+    const trimmedUrlFieldValue = urlFieldValue.trim();
     const alreadyUsedRssLinks = watchedState.feeds.map(({ link }) => link);
 
-    const error = validate(trimedUrlFieldValue, alreadyUsedRssLinks);
+    const error = validate(trimmedUrlFieldValue, alreadyUsedRssLinks);
     const isValidForm = !error;
 
     updateValidationState(error, watchedState);
@@ -92,11 +92,11 @@ const app = () => {
 
     watchedState.form.processState = processStatuses.SENDING;
 
-    const urlWithCorsProxy = buildUrlWithCorsProxy(trimedUrlFieldValue);
+    const urlWithCorsProxy = buildUrlWithCorsProxy(trimmedUrlFieldValue);
 
     getParsedFeedData(urlWithCorsProxy)
       .then(({ posts, feed }) => {
-        const feedWithLink = { link: trimedUrlFieldValue, ...feed };
+        const feedWithLink = { link: trimmedUrlFieldValue, ...feed };
         watchedState.feeds.unshift(feedWithLink);
         watchedState.posts.push(...posts);
         watchedState.form.processState = processStatuses.FINISHED;
