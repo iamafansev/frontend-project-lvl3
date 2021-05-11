@@ -15,7 +15,7 @@
     "css-loader": "^4.2.2",
     "i18next": "^19.7.0",
     "jquery": "^3.5.1",
-    "lodash": "^4.17.20",
+    "lodash": "^4.17.21",
     "on-change": "^2.1.1",
     "style-loader": "^1.2.1",
     "webpack-cli": "^3.3.12",
